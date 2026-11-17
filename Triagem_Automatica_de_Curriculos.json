@@ -1,0 +1,678 @@
+{
+  "name": "Triagem Automática de Currículos",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "={{ Object.keys($binary)[0] }}",
+        "options": {
+          "joinPages": true
+        }
+      },
+      "id": "c54bbd51-b104-4e2b-9e35-0fd1ed52aa35",
+      "name": "Extrair Texto do Currículo",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        432,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analise o currículo fornecido abaixo para extrair os dados acadêmicos e profissionais solicitados. Certifique-se de validar se o candidato possui qualquer histórico ou vivência prática em rotinas contábeis, fiscais ou de auditoria.\n\nTexto do currículo:\n{{ $json.text }}\n\nLembre-se: use exatamente os nomes de campo faculdade_nome, curso_nome, periodo_atual, tem_experiencia_contabilidade, resumo_experiencia_contabil e adequacao_vaga no JSON de resposta.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Você é um especialista em recrutamento e seleção (Tech Recruiter) focado na triagem técnica de currículos para a área de contabilidade e finanças.\n\nSuas diretrizes obrigatórias são:\n1. Analise o texto do currículo fornecido com máxima atenção aos detalhes acadêmicos e profissionais.\n2. Identifique explicitamente a instituição de ensino, o curso e o período atual do estudante (ou se já concluiu).\n3. Avalie o histórico profissional em busca de experiência ligada a rotinas contábeis, fiscais ou de auditoria. Considere tanto termos explícitos (ex: conciliação, balanços, escrita fiscal, DRE, impostos, lançamentos contábeis, auditoria) quanto descrições indiretas de atividades da área, mesmo sem usar o jargão contábil — por exemplo: \"controle de contas a pagar e receber\", \"emissão de notas fiscais\", \"auxiliar financeiro\", \"fluxo de caixa\", \"fechamento de caixa\", \"apoio em rotinas administrativo-financeiras\", \"monitoria ou estágio em disciplina de contabilidade/finanças\". Você pode inferir que uma atividade descrita é da área contábil quando a função relatada corresponde claramente a uma dessas rotinas, mesmo que a palavra \"contabilidade\" não apareça no texto.\n4. Seja factual: só considere como experiência contábil algo que esteja descrito no currículo (não invente nem assuma cargos ou tarefas que não constam no texto). Para os demais campos (faculdade, curso, período), se a informação não estiver escrita, responda \"Não informado\".\n5. Classifique o nível de adequação do candidato no campo \"adequacao_vaga\", usando exatamente um destes três valores, sem variações, acentos alternativos, espaços extras ou texto adicional: \"Alta\", \"Média\" ou \"Baixa\".\n   - \"Alta\": o candidato possui vivência prática (explícita ou claramente descrita) em rotinas contábeis, fiscais ou de auditoria.\n   - \"Média\": o candidato estuda ou já concluiu curso relacionado à área contábil/financeira, mas não descreve experiência prática relacionada.\n   - \"Baixa\": não há indícios de formação ou experiência relacionada à área contábil/financeira no currículo.\n\nFORMATO DE SAÍDA OBRIGATÓRIO: sua resposta final deve ser um objeto JSON usando EXATAMENTE estes nomes de campo, sem traduzir, abreviar, renomear ou usar sinônimos:\n- \"faculdade_nome\": nome da instituição de ensino (string)\n- \"curso_nome\": nome do curso (string)\n- \"periodo_atual\": período/semestre atual ou situação de conclusão (string)\n- \"tem_experiencia_contabilidade\": \"Sim\" ou \"Não\" (string — nunca use true/false)\n- \"resumo_experiencia_contabil\": um resumo objetivo (1 a 2 frases) da experiência contábil/fiscal/auditoria identificada no currículo, incluindo experiências descritas de forma indireta conforme a diretriz 3. Se não houver nenhum indício, use \"Nenhuma experiência contábil identificada\".\n- \"adequacao_vaga\": \"Alta\", \"Média\" ou \"Baixa\" (string)\n\nExemplo do formato exato esperado:\n{\"faculdade_nome\": \"Anhanguera\", \"curso_nome\": \"Ciências Contábeis\", \"periodo_atual\": \"6º semestre\", \"tem_experiencia_contabilidade\": \"Sim\", \"resumo_experiencia_contabil\": \"Estágio em conciliação bancária por 1 ano\", \"adequacao_vaga\": \"Alta\"}\n\nNunca use nomes de campo diferentes destes seis, mesmo que pareçam mais naturais ou mais claros."
+        }
+      },
+      "id": "94dc7eeb-f5b6-4c9f-b411-b7855071176a",
+      "name": "Analisar Currículo",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        688,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.adequacao_vaga.trim() }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "Alta",
+                    "id": "150de5ad-9b63-4058-a7be-eac24bb3eb0a"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Alta Adequação"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.adequacao_vaga.trim() }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "Média",
+                    "id": "fa94184c-6faa-47dd-b61e-321d42ead7b9"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Média Adequação"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.adequacao_vaga.trim() }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "Baixa",
+                    "id": "c45908dd-836d-4647-b607-a6ac2795c8cd"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Baixa Adequação"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": 2
+        }
+      },
+      "id": "4aada45d-a99e-4337-a142-415fd2875ed0",
+      "name": "Classificar por Adequação",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1152,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1wnlrjg59PKLz_VGRoVTR027RtLdapOQZY6LC1tL7qU4/edit?usp=sharing",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wnlrjg59PKLz_VGRoVTR027RtLdapOQZY6LC1tL7qU4/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "faculdade": "={{ $json.output.faculdade_nome }}",
+            "curso": "={{ $json.output.curso_nome }}",
+            "periodo": "={{ $json.output.periodo_atual }}",
+            "tem_experiencia": "={{ $json.output.tem_experiencia_contabilidade }}",
+            "resumo_experiencia": "={{ $json.output.resumo_experiencia_contabil }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "faculdade",
+              "displayName": "faculdade",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "curso",
+              "displayName": "curso",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "periodo",
+              "displayName": "periodo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "tem_experiencia",
+              "displayName": "tem_experiencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "resumo_experiencia",
+              "displayName": "resumo_experiencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "f59abb1c-9190-435c-a3d0-193fd2828572",
+      "name": "Armazenar - Alta Adequação",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1376,
+        208
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "yHACWPj9RCUtqgtZ",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1XNiACq3SIqlHG6nvok7-Aks1StmdUjLnVLl0N6GhFAg/edit?usp=sharing",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1XNiACq3SIqlHG6nvok7-Aks1StmdUjLnVLl0N6GhFAg/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "faculdade": "={{ $json.output.faculdade_nome }}",
+            "curso": "={{ $json.output.curso_nome }}",
+            "periodo": "={{ $json.output.periodo_atual }}",
+            "tem_experiencia": "={{ $json.output.tem_experiencia_contabilidade }}",
+            "resumo_experiencia": "={{ $json.output.resumo_experiencia_contabil }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "faculdade",
+              "displayName": "faculdade",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "curso",
+              "displayName": "curso",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "periodo",
+              "displayName": "periodo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "tem_experiencia",
+              "displayName": "tem_experiencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "resumo_experiencia",
+              "displayName": "resumo_experiencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "78194bec-88ca-4225-8c7c-f2f99eb198be",
+      "name": "Armazenar - Média Adequação",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1376,
+        400
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "yHACWPj9RCUtqgtZ",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1Zqj0A9xPOsmPrxS-pJWWkr8G8MOqzuxZ_V7-QEJOqt8/edit?usp=sharing",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Zqj0A9xPOsmPrxS-pJWWkr8G8MOqzuxZ_V7-QEJOqt8/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "faculdade": "={{ $json.output.faculdade_nome }}",
+            "curso": "={{ $json.output.curso_nome }}",
+            "periodo": "={{ $json.output.periodo_atual }}",
+            "tem_experiencia": "={{ $json.output.tem_experiencia_contabilidade }}",
+            "resumo_experiencia": "={{ $json.output.resumo_experiencia_contabil }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "faculdade",
+              "displayName": "faculdade",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "curso",
+              "displayName": "curso",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "periodo",
+              "displayName": "periodo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "tem_experiencia",
+              "displayName": "tem_experiencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "resumo_experiencia",
+              "displayName": "resumo_experiencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "5acf0943-c21b-4790-8abe-615b297223f3",
+      "name": "Armazenar - Baixa Adequação",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1376,
+        592
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "yHACWPj9RCUtqgtZ",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "hasAttachments": true,
+          "readStatus": "unread"
+        },
+        "options": {
+          "attachmentsPrefix": "attachment_",
+          "downloadAttachments": true
+        }
+      },
+      "id": "a4125234-5a64-48a2-95c7-aa42bd2dca4c",
+      "name": "Receber Currículos - Outlook",
+      "type": "n8n-nodes-base.microsoftOutlookTrigger",
+      "typeVersion": 1,
+      "position": [
+        208,
+        400
+      ],
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "p8qDtafFe36CgTcv",
+          "name": "Microsoft Outlook OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "messageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $(\"Receber Currículos - Outlook\").item.json.id }}"
+        },
+        "updateFields": {
+          "isRead": true
+        }
+      },
+      "id": "249b698b-aeed-4a91-9d06-11a1af1cbdaa",
+      "name": "Marcar Email Outlook como Lido",
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        400
+      ],
+      "webhookId": "7df6110a-def9-484b-92ce-c15e2b31622c",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "p8qDtafFe36CgTcv",
+          "name": "Microsoft Outlook OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "={{ \nJSON.stringify({\n  \"faculdade_nome\": \"string\",\n  \"curso_nome\": \"string\",\n  \"periodo_atual\": \"string\",\n  \"tem_experiencia_contabilidade\": \"string\",\n  \"resumo_experiencia_contabil\": \"string\",\n  \"adequacao_vaga\": \"string\"\n}) \n}}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        784,
+        624
+      ],
+      "id": "37128c60-c162-4ab4-8ee0-5e4f4d88ea77",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "65d4419c-5236-4567-b5b5-d8f4763bd5f6",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        656,
+        624
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "h9aPYToOGZaa2gUZ",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        864,
+        832
+      ],
+      "id": "b7ebb018-8069-42f6-8fc9-20cd59cb4102",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "h9aPYToOGZaa2gUZ",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Extrair Texto do Currículo": {
+      "main": [
+        [
+          {
+            "node": "Analisar Currículo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analisar Currículo": {
+      "main": [
+        [
+          {
+            "node": "Classificar por Adequação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classificar por Adequação": {
+      "main": [
+        [
+          {
+            "node": "Armazenar - Alta Adequação",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Armazenar - Média Adequação",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Armazenar - Baixa Adequação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armazenar - Alta Adequação": {
+      "main": [
+        [
+          {
+            "node": "Marcar Email Outlook como Lido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armazenar - Média Adequação": {
+      "main": [
+        [
+          {
+            "node": "Marcar Email Outlook como Lido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armazenar - Baixa Adequação": {
+      "main": [
+        [
+          {
+            "node": "Marcar Email Outlook como Lido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Receber Currículos - Outlook": {
+      "main": [
+        [
+          {
+            "node": "Extrair Texto do Currículo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Analisar Currículo",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Analisar Currículo",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "pinData": {},
+  "active": false
+}
